@@ -2,7 +2,7 @@ import numpy as np
 
 try:
     import tqdm
-else:
+except:
     # If tqdm is not found, just return the generator
     tqdm = lambda x: x
 
