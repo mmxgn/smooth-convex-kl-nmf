@@ -2,13 +2,16 @@ import numpy as np
 
 try:
     import tqdm
-except:
+except ModuleNotFoundError:
     # If tqdm is not found, just return the generator
-    tqdm = lambda x: x
+    def tqdm(x):
+        return x
+
 
 def smooth(H):
     # Used as regularization for "smoothing" the resulting activations across columns
     return 0.5 * np.sum([(H[:, n] - H[:, n - 1]) ** 2 for n in range(1, H.shape[1])])
+
 
 def objfunc(V, W, H, beta=0.0):
     # Kullback-Leibler Divergence + "Smoothness" regularizer
@@ -17,8 +20,9 @@ def objfunc(V, W, H, beta=0.0):
         V * np.log(V / np.matmul(W, H)) - V + np.matmul(W, H)
     ) + beta * smooth(np.matmul(Lamda, H))
 
+
 def update_h_given_w(V, W, H, beta=0.0):
-    # Consider W fixed, then update towards a better H. Used in SmoothNMF.
+    # Consider W fixed, then update towards a better H. Used in smoothNMF.
     # beta is the regularization penalizing weight.
 
     F = V.shape[0]
@@ -32,7 +36,9 @@ def update_h_given_w(V, W, H, beta=0.0):
     vhat = np.matmul(W, H)
 
     psi = H * np.matmul(W.T, V / vhat)
-    lamda = lambda k: wcolnorms[k]
+
+    def lamda(k):
+        return wcolnorms[k]
 
     if beta == 0:
         Hnew = np.zeros_like(H)
@@ -58,7 +64,7 @@ def update_h_given_w(V, W, H, beta=0.0):
 
 
 def update_w_given_h(V, W, H, beta=0.0):
-    # Consider H fixed, then update towards a better W. Used in SmoothNMF.
+    # Consider H fixed, then update towards a better W. Used in smoothNMF.
     # beta is the regularization penalizing weight.
 
     F = V.shape[0]
@@ -85,8 +91,9 @@ def update_w_given_h(V, W, H, beta=0.0):
         Wnew = (np.sqrt(b ** 2 + 4 * a * phi) - b) / (2 * a)
         return Wnew
 
+
 def update_l_given_h(V, L, H, beta=0.0):
-    # Consider H fixed, then update towards a better L such that W = VL. Used in SmoothConvexNMF.
+    # Consider H fixed, then update towards a better L such that W = VL. Used in smoothConvexNMF.
     # beta is the regularization penalizing weight. The idea behind W = VL is that the dictionary W
     # is chosen from data points from the original data V.
 
@@ -131,7 +138,7 @@ def update_l_given_h(V, L, H, beta=0.0):
     return Lnew
 
 
-def SmoothConvexNMF(V, k, beta=0.001, tol=1e-8, max_iter=100, n_trials_init=10):
+def smoothConvexNMF(V, k, beta=0.001, tol=1e-8, max_iter=100, n_trials_init=10):
     # Smooth and Convex NMF constraints the activations H to be smooth and "sparse"
 
     # Initialize randomly after some trials
@@ -146,12 +153,9 @@ def SmoothConvexNMF(V, k, beta=0.001, tol=1e-8, max_iter=100, n_trials_init=10):
         cost = objfunc(V, W, H, beta)
 
         if cost < best_cost:
-            Linit = L
-            Hinit = H
+            Lh = L
+            Hh = H
             best_cost = cost
-
-    Lh = Linit
-    Hh = Hinit
 
     costs = np.zeros((max_iter,))
     last_cost = np.inf
@@ -174,8 +178,8 @@ def SmoothConvexNMF(V, k, beta=0.001, tol=1e-8, max_iter=100, n_trials_init=10):
     return Lh, Hh, costs[:I]
 
 
-def SmoothNMF(V, k, beta=0.0, tol=1e-8, max_iter=100, n_trials_init=10):
-    # SmoothNMF constraints the activations to be "smooth"
+def smoothNMF(V, k, beta=0.0, tol=1e-8, max_iter=100, n_trials_init=10):
+    # smoothNMF constraints the activations to be "smooth"
 
     # Initialize randomly after some trials
     best_cost = np.inf
@@ -186,12 +190,9 @@ def SmoothNMF(V, k, beta=0.0, tol=1e-8, max_iter=100, n_trials_init=10):
         H = np.abs(np.random.randn(k, V.shape[1]))
         cost = objfunc(V, W, H, beta)
         if cost < best_cost:
-            Winit = W
-            Hinit = H
+            Wh = W
+            Hh = H
             best_cost = cost
-
-    Wh = Winit
-    Hh = Hinit
 
     costs = np.zeros((max_iter,))
     last_cost = np.inf
