@@ -35,7 +35,7 @@ V = np.matmul(X, Y)
 
 L, H, cost = SmoothConvexNMF(V, 3, beta=0.01, max_iter=1000)
 
-# Originally V = WH, but here we constrained W to be a linear combination of the columns of V.
+# Originally V = WH, but here we constrained W to be a linear combination of the rows of V.
 
 W = np.matmul(V, L)
 
