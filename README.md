@@ -34,8 +34,24 @@ Y += np.abs(np.random.randn(Y.shape[0], Y.shape[1]) * 0.00001)
 V = np.matmul(X, Y)
 
 L, H, cost = SmoothConvexNMF(V, 3, beta=0.01, max_iter=1000)
+
+# Originally V = WH, but here we constrained W to be a linear combination of the columns of V.
+
+W = np.matmul(V, L)
+
 print(cost[-1])
+
+# Plot the cost (requires matplotlib)
+import matplotlib.pyplot as plt
+plt.plt(cost)
+plt.title('cost')
+plt.xlabel('iteration #')
+
+# Plot dictionary matrix W
+plt.imshow(W, aspect='auto')
+plt.title('W')
+
 ```
 
-You can run it then with ```python runnmf.py``` which will print the cost at the last iteration. Of course you could do better things with it like plotting the cost curve, showing V, W, and H as images, and the like.
+You can run it then with ```python runnmf.py``` which will print the cost at the last iteration. Of course you could do better things with it like plotting the cost curve, showing **V**, **W**, and **H** as images, and the like.
 
