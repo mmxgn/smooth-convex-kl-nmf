@@ -1,7 +1,7 @@
 # python-nmf-methods
 
 ## About
-Repository holding various implementation of specific NMF methods.
+Repository holding various implementations of specific NMF methods.
 
 As a starting point the code provided implements an inefficient version of the NMF approach described in 
 ```
