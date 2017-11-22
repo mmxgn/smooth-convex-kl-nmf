@@ -10,7 +10,11 @@ Smooth nonnegative matrix factorization for unsupervised audiovisual document st
 IEEE Transactions on Multimedia, 15(2), 2013, pp.415-425.
 ```
 
+The paper describes a method for unsupervised NMF on datasets of Bag-of-Words features learned from video and audio data. The method is used for the speaker diarization (who spoke when) problem. The optimization process includes regularization for smoothness and sparsity for the activation matrix.
+
 **Note:** I am aware that I could do with more factorized code and better nesting of loops, however I initially wanted something that works and that can pass my unit tests. The code will be improved over time and implemented in a GPU accelerated framework (i.e. minpy) with MiniBatch support. 
+
+There are currently two functions in ```scnmf.py```. ```SmoothNMF``` is much faster than ```SmoothConvexNMF``` but the later works better for audio.
 
 ## How to run
 
