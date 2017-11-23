@@ -1,12 +1,5 @@
 import numpy as np
-
-try:
-    import tqdm
-except ModuleNotFoundError:
-    # If tqdm is not found, just return the generator
-    def tqdm(x):
-        return x
-
+import tqdm
 
 def smooth(H):
     # Used as regularization for "smoothing" the resulting activations across columns
@@ -95,9 +88,6 @@ def update_w_given_h(V, W, H, beta=0.0):
         return Wnew
 
 
-
-
-
 def update_l_given_h(V, L, H, beta=0.001):
     F = V.shape[0]
     N = V.shape[1]
@@ -173,6 +163,29 @@ def smoothConvexNMF(V, k, beta=0.001, tol=1e-8, max_iter=100, n_trials_init=10):
     return Lh, Hh, costs[:I]
 
 
+def miniBatchSmoothConvexNMF(V, k, batch_size=5, epochs=1000, beta=0.001):
+    best_cost = np.inf
+
+    costs = []
+    batchindices = np.array_split(np.arange(V.shape[1]), V.shape[1] / batch_size)
+
+    # Initialize H, L randomly
+    H = np.abs(np.random.randn(k, V.shape[1]))
+    L = np.abs(np.random.randn(V.shape[1], k))
+
+    for epoch in tqdm.tqdm(range(epochs)):
+        for batchidx in batchindices:
+            # Update the activations for each batch
+            H[:, batchidx] = update_h_given_w(V[:, batchidx], np.matmul(V, L), H[:, batchidx], beta)
+
+        # Update the dictionary once per epoch
+        L = update_l_given_h(V, L, H, beta)
+
+        cur_cost = objfunc(V, np.matmul(V, L), H, beta)
+        costs.append(cur_cost)
+    return L, H, costs
+
+
 def smoothNMF(V, k, beta=0.0, tol=1e-8, max_iter=100, n_trials_init=10):
     # smoothNMF constraints the activations to be "smooth"
 
@@ -207,3 +220,5 @@ def smoothNMF(V, k, beta=0.0, tol=1e-8, max_iter=100, n_trials_init=10):
         Wh = update_w_given_h(V, Wh, Hh, beta)
 
     return Wh, Hh, costs[:I]
+
+
