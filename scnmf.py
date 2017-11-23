@@ -10,8 +10,11 @@ except ModuleNotFoundError:
 
 def smooth(H):
     # Used as regularization for "smoothing" the resulting activations across columns
-    return 0.5 * np.sum([(H[:, n] - H[:, n - 1]) ** 2 for n in range(1, H.shape[1])])
+    return 0.5 * np.sum((H[:, :-1] - H[:, 1:]) ** 2)
 
+def smooth_rows(H):
+    # Same as above, but smooths the rows instead
+    return 0.5 * np.sum((H[:, :-1] - H[:, 1:]) ** 2, axis=1)
 
 def objfunc(V, W, H, beta=0.0):
     # Kullback-Leibler Divergence + "Smoothness" regularizer
@@ -92,11 +95,10 @@ def update_w_given_h(V, W, H, beta=0.0):
         return Wnew
 
 
-def update_l_given_h(V, L, H, beta=0.0):
-    # Consider H fixed, then update towards a better L such that W = VL. Used in smoothConvexNMF.
-    # beta is the regularization penalizing weight. The idea behind W = VL is that the dictionary W
-    # is chosen from data points from the original data V.
 
+
+
+def update_l_given_h(V, L, H, beta=0.001):
     F = V.shape[0]
     N = V.shape[1]
     M = L.shape[0]
@@ -104,34 +106,27 @@ def update_l_given_h(V, L, H, beta=0.0):
 
     vhat = np.matmul(np.matmul(V, L), H)
 
-    phi = np.zeros((M, K))
+    # The following computes the inner sum V^v_{kn} = \sum_{fn}{v_{fn}/\hat{v}_{fn}*f_{kn}
+    VV = np.matmul(V / vhat, H.T)
 
-    for m in range(M):
-        for k in range(K):
-            phi[m, k] = L[m, k] * np.sum([
-                np.sum([
-                    V[f, m] * V[f, n] / vhat[f, n] * H[k, n] for n in range(N)
-                ]) for f in range(F)
-            ])
+    # Computes phi as phi_{mk}
+    phi = L * np.matmul(V.T, VV)
 
-    a = np.zeros((M, K))
-    b = np.zeros((M, K))
     sigma_k = np.sum(H, axis=1).reshape(1, K)
+    s_k = smooth_rows(H).reshape(1, -1)
 
-    s_k = np.zeros((K,))
-    delta = np.zeros((M,))
-    for k in range(K):
-        s_k[k] = 2 * smooth(H[k, :].reshape(1, -1))
-    for m in range(M):
-        delta[m] = np.sum([V[f, m] for f in range(F)])
+    delta = np.sum(V, axis=0).reshape(-1, 1)
+    a = beta * np.matmul(delta ** 2, s_k)
+    DL = delta * L
 
-    for m in range(M):
+    sumColsDL = np.sum(DL, 1).reshape(-1, 1)
+    sumDL = np.sum(sumColsDL)
+    sigma_k_delta = np.matmul(delta, sigma_k)
 
-        for k in range(K):
-            a[m, k] = beta * s_k[k] * delta[m] ** 2
-            b[m, k] = (sigma_k[0, k] + beta * np.sum([
-                delta[n] * L[n, k] for n in range(N) if n != m
-            ])) * delta[m]
+    b = np.zeros((M, K))
+    b += sumDL - sumColsDL
+    b *= beta * delta
+    b += sigma_k_delta
 
     Lnew = (np.sqrt(b ** 2 + 4 * a * phi) - b) / (2 * a)
 
