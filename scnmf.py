@@ -197,7 +197,7 @@ def smoothNMF(V, k, beta=0.0, tol=1e-8, max_iter=100, n_trials_init=10):
     costs = np.zeros((max_iter,))
     last_cost = np.inf
     for I in tqdm.tqdm(range(max_iter)):
-        cur_cost = objfunc(V, np.matmul(V, Lh), Hh, beta)
+        cur_cost = objfunc(V, Wh, Hh, beta)
 
         cost_diff = np.abs(cur_cost - last_cost)
         if cost_diff <= tol:
