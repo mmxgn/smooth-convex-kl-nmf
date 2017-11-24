@@ -1,7 +1,7 @@
 # smooth-convex-kl-nmf
 
 ## About
-Repository holding implementations for NMF based on Kullback-Leibler divergence and additional smoothness and sparsity constraints.
+Repository holding implementations for Non-negative matrix factorization (NMF) based on Kullback-Leibler divergence and additional smoothness and sparsity constraints.
 
 As a starting point the code provided implements an inefficient version of the NMF approach described in 
 ```
