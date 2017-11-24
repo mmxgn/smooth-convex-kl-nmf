@@ -1,7 +1,7 @@
-# python-nmf-methods
+# smooth-convex-kl-nmf
 
 ## About
-Repository holding various implementations of specific NMF methods.
+Repository holding implementations for NMF based on Kullback-Leibler divergence and additional smoothness and sparsity constraints.
 
 As a starting point the code provided implements an inefficient version of the NMF approach described in 
 ```
