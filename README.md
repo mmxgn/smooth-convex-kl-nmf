@@ -12,9 +12,9 @@ IEEE Transactions on Multimedia, 15(2), 2013, pp.415-425.
 
 The paper describes a method for unsupervised NMF on datasets of Bag-of-Words features learned from video and audio data. The method is used for the speaker diarization (who spoke when) problem. The optimization process includes regularization for smoothness and sparsity for the activation matrix.
 
-**Note:** I am aware that I could do with more factorized code and better nesting of loops, however I initially wanted something that works and that can pass my unit tests. The code will be improved over time and implemented in a GPU accelerated framework (i.e. minpy) with MiniBatch support. 
+**Note:** The code will be improved over time and implemented in a GPU accelerated framework (i.e. minpy) with MiniBatch support. While there are two versions of NMF currently (a smoothed KL-NMF and a smoothed convex KL-NMF), only the later is currently optimized. Next step is to support graphics card acceleration (possibly through mxnet).
 
-There are currently two functions in ```scnmf.py```. ```SmoothNMF``` is much faster than ```SmoothConvexNMF``` but the later works better for audio.
+There are currently three functions in ```scnmf.py```. ```smoothNMF```, ```smoothConvexNMF```, and ```miniBatchSmoothConvexNMF``` which is a version that supports large datasets. Currently only the ```smoothConvexNMF``` and its minibatched versions are optimized. 
 
 ## How to run
 
@@ -34,6 +34,10 @@ Y += np.abs(np.random.randn(Y.shape[0], Y.shape[1]) * 0.00001)
 V = np.matmul(X, Y)
 
 L, H, cost = SmoothConvexNMF(V, 3, beta=0.01, max_iter=1000)
+
+# or
+
+L, H, cost = minibatchSmoothConvexNMF(V, 3, beta=0.01, batch_size=2, epochs=1000)
 
 # Originally V = WH, but here we constrained W to be a linear combination of the rows of V.
 
