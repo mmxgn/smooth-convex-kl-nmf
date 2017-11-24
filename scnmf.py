@@ -17,44 +17,37 @@ def objfunc(V, W, H, beta=0.0):
     ) + beta * smooth(np.matmul(Lamda, H))
 
 
-def update_h_given_w(V, W, H, beta=0.0):
-    # Consider W fixed, then update towards a better H. Used in smoothNMF.
-    # beta is the regularization penalizing weight.
-
+def update_h_given_w(V, W, H, beta=0.0, lamda=None):
     F = V.shape[0]
     N = V.shape[1]
     K = W.shape[1]
 
-    # These are lambda_k in the paper, the norms of the columns of W
-    wcolnorms = np.array([[np.linalg.norm(W[:, k], 1) for k in range(K)]]).T
-
-    # The current approximation
+    if lamda is None:
+        # Lamda can be precomputed once
+        lamda = np.linalg.norm(W, 1, axis=0)
+    lamda_col = lamda.reshape(-1, 1)
     vhat = np.matmul(W, H)
 
     psi = H * np.matmul(W.T, V / vhat)
 
-    def lamda(k):
-        return wcolnorms[k]
-
     if beta == 0:
-        Hnew = np.zeros_like(H)
         Hnew = psi / wcolnorms
-
         return Hnew
     else:
         a = np.zeros((K, N))
         b = np.zeros((K, N))
-        for k in range(K):
-            for n in range(N):
-                if n == 0:
-                    b[k, 0] = lamda(k) * (1 - beta * lamda(k) * H[k, 1])
-                    a[k, 0] = beta * lamda(k) ** 2
-                elif n == N - 1:
-                    b[k, N - 1] = lamda(k) * (1 - beta * lamda(k) * H[k, N - 2])
-                    a[k, N - 1] = beta * lamda(k) ** 2
-                else:
-                    a[k, n] = 2 * beta * lamda(k) ** 2
-                    b[k, n] = lamda(k) * (1 - beta * lamda(k) * (H[k, n - 1] + H[k, n + 1]))
+
+        # Edge cases
+        b[:, 0] = lamda * (1 - beta * lamda * H[:, 1])
+        a[:, 0] = a[:, N - 1] = beta * lamda ** 2
+        a[:, 1:N - 1] = 2 * beta * lamda_col ** 2
+        b[:, N - 1] = lamda * (1 - beta * lamda * H[:, N - 2])
+
+        # Rest of cases
+
+        Dh = (H[:, :-2] + H[:, 2:])
+        b[:, 1:-1] = lamda_col * (1 - beta * lamda_col * Dh)
+
         Hnew = (np.sqrt(b ** 2 + 4 * a * psi) - b) / (2 * a)
         return Hnew
 
@@ -163,7 +156,7 @@ def smoothConvexNMF(V, k, beta=0.001, tol=1e-8, max_iter=100, n_trials_init=10):
     return Lh, Hh, costs[:I]
 
 
-def miniBatchSmoothConvexNMF(V, k, batch_size=5, epochs=1000, beta=0.001):
+def miniBatchSmoothConvexNMF(V, k, batch_size=5, epochs=1000, beta=0.001, tol=1e-8):
     best_cost = np.inf
 
     costs = []
@@ -174,9 +167,12 @@ def miniBatchSmoothConvexNMF(V, k, batch_size=5, epochs=1000, beta=0.001):
     L = np.abs(np.random.randn(V.shape[1], k))
 
     for epoch in tqdm.tqdm(range(epochs)):
+        W = np.matmul(V, L)
+        lamda = np.linalg.norm(W, 1, axis=0)
+
         for batchidx in batchindices:
             # Update the activations for each batch
-            H[:, batchidx] = update_h_given_w(V[:, batchidx], np.matmul(V, L), H[:, batchidx], beta)
+            H[:, batchidx] = update_h_given_w(V[:, batchidx], W, H[:, batchidx], beta, lamda=lamda)
 
         # Update the dictionary once per epoch
         L = update_l_given_h(V, L, H, beta)
