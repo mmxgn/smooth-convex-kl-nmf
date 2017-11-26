@@ -1,13 +1,20 @@
-import numpy as np
+try:
+    # If minpy is available, use it.
+    import minpy.numpy as np
+except ImportError:
+    import numpy as np
 import tqdm
+
 
 def smooth(H):
     # Used as regularization for "smoothing" the resulting activations across columns
     return 0.5 * np.sum((H[:, :-1] - H[:, 1:]) ** 2)
 
+
 def smooth_rows(H):
     # Same as above, but smooths the rows instead
     return 0.5 * np.sum((H[:, :-1] - H[:, 1:]) ** 2, axis=1)
+
 
 def objfunc(V, W, H, beta=0.0):
     # Kullback-Leibler Divergence + "Smoothness" regularizer
@@ -116,24 +123,29 @@ def update_l_given_h(V, L, H, beta=0.001):
     return Lnew
 
 
-def smoothConvexNMF(V, k, beta=0.001, tol=1e-8, max_iter=100, n_trials_init=10):
+def smoothConvexNMF(V, k, beta=0.001, tol=1e-8, max_iter=100, n_trials_init=10, init='random'):
     # Smooth and Convex NMF constraints the activations H to be smooth and "sparse"
 
-    # Initialize randomly after some trials
-    best_cost = np.inf
+    if init == 'random':
+        # Initialize randomly after some trials
+        best_cost = np.inf
 
-    for n in range(n_trials_init):
+        for n in range(n_trials_init):
 
-        L = np.abs(np.random.randn(V.shape[1], k))
-        H = np.abs(np.random.randn(k, V.shape[1]))
+            L = np.abs(np.random.randn(V.shape[1], k))
+            H = np.abs(np.random.randn(k, V.shape[1]))
 
-        W = np.matmul(V, L)
-        cost = objfunc(V, W, H, beta)
+            W = np.matmul(V, L)
+            cost = objfunc(V, W, H, beta)
 
-        if cost < best_cost:
-            Lh = L
-            Hh = H
-            best_cost = cost
+            if cost < best_cost:
+                Lh = L
+                Hh = H
+                best_cost = cost
+    else:
+        # If init is not 'random' then use predefined matrices
+        Lh = init['L']
+        Hh = init['H']
 
     costs = np.zeros((max_iter,))
     last_cost = np.inf
@@ -156,23 +168,36 @@ def smoothConvexNMF(V, k, beta=0.001, tol=1e-8, max_iter=100, n_trials_init=10):
     return Lh, Hh, costs[:I]
 
 
-def miniBatchSmoothConvexNMF(V, k, batch_size=5, epochs=1000, beta=0.001, tol=1e-8):
+def miniBatchSmoothConvexNMF(V, k, batch_size=5, epochs=1000, beta=0.001, tol=1e-8, sort=True, init='random'):
     best_cost = np.inf
 
     costs = []
     batchindices = np.array_split(np.arange(V.shape[1]), V.shape[1] / batch_size)
 
-    # Initialize H, L randomly
-    H = np.abs(np.random.randn(k, V.shape[1]))
-    L = np.abs(np.random.randn(V.shape[1], k))
+    if init == 'random':
+        # Initialize H, L randomly
+        H = np.abs(np.random.randn(k, V.shape[1]))
+        L = np.abs(np.random.randn(V.shape[1], k))
+    else:
+        # If init is not 'random' then use predefined matrices
+        H = init['H']
+        L = init['L']
 
     for epoch in tqdm.tqdm(range(epochs)):
         W = np.matmul(V, L)
         lamda = np.linalg.norm(W, 1, axis=0)
 
-        for batchidx in batchindices:
+        for n, batchidx in enumerate(batchindices):
             # Update the activations for each batch
-            H[:, batchidx] = update_h_given_w(V[:, batchidx], W, H[:, batchidx], beta, lamda=lamda)
+            if n > 0 and n < len(batchindices) - 1:
+                H[:, batchidx] = update_h_given_w(V[:, min(batchidx) - 1:max(batchidx) + 2], W,
+                                                  H[:, min(batchidx) - 1:max(batchidx) + 2], beta, lamda=lamda)[:, 1:-1]
+            if n == 0:
+                H[:, batchidx] = update_h_given_w(V[:, min(batchidx):max(batchidx) + 2], W,
+                                                  H[:, min(batchidx):max(batchidx) + 2], beta, lamda=lamda)[:, :-1]
+            if n == len(batchindices) - 1:
+                H[:, batchidx] = update_h_given_w(V[:, min(batchidx) - 1:max(batchidx) + 1], W,
+                                                  H[:, min(batchidx) - 1:max(batchidx) + 1], beta, lamda=lamda)[:, 1:]
 
         # Update the dictionary once per epoch
         L = update_l_given_h(V, L, H, beta)
