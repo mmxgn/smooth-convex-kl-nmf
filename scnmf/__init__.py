@@ -1,8 +1,4 @@
-try:
-    # If minpy is available, use it.
-    import minpy.numpy as np
-except ImportError:
-    import numpy as np
+import numpy as np
 import tqdm
 
 

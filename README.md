@@ -18,7 +18,21 @@ There are currently three functions in ```scnmf.py```. ```smoothNMF```, ```smoot
 
 ## How to run
 
-```scnmf.py``` depends on the ```numpy``` python package. You can install it with ```pip install numpy [--user]```
+1. Clone the directory
+```bash
+ $ git clone https://github.com/mmxgn/smooth-convex-kl-nmf 
+ ```
+ 
+ 2. Install the requirements using pip
+ ```bash
+$ cd smooth-convex-kl-nmf
+$ pip install --user -r requirements.txt
+```
+ 
+ 3. Install the package
+ ```bash
+$ python setup.py install --user
+```
 
 Then you can create a new file ```runnmf.py``` at the same directory as ```scnmf.py``` and add the following:
 
