@@ -1,5 +1,9 @@
 import numpy as np
-import tqdm
+try:
+    get_ipython()
+    from tqdm import tqdm_notebook as tqdm
+except:
+    from tqdm import tqdm as tqdm
 
 
 def smooth(H):
@@ -14,7 +18,8 @@ def smooth_rows(H):
 
 def objfunc(V, W, H, beta=0.0):
     # Kullback-Leibler Divergence + "Smoothness" regularizer
-    Lamda = np.diag([np.linalg.norm(W[:, k], 1) for k in range(W.shape[1])])
+    Lamda = np.diag(np.sum(np.abs(W), axis=0))
+
     return np.sum(
         V * np.log(V / np.matmul(W, H)) - V + np.matmul(W, H)
     ) + beta * smooth(np.matmul(Lamda, H))
@@ -27,7 +32,7 @@ def update_h_given_w(V, W, H, beta=0.0, lamda=None):
 
     if lamda is None:
         # Lamda can be precomputed once
-        lamda = np.linalg.norm(W, 1, axis=0)
+        lamda = np.sum(np.abs(W), axis=0)
     lamda_col = lamda.reshape(-1, 1)
     vhat = np.matmul(W, H)
 
@@ -146,7 +151,7 @@ def smoothConvexNMF(V, k, beta=0.001, tol=1e-8, max_iter=100, n_trials_init=10, 
     costs = np.zeros((max_iter,))
     last_cost = np.inf
 
-    for I in tqdm.tqdm(range(max_iter)):
+    for I in tqdm(range(max_iter)):
         cur_cost = objfunc(V, np.matmul(V, Lh), Hh, beta)
 
         cost_diff = np.abs(cur_cost - last_cost)
@@ -179,9 +184,10 @@ def miniBatchSmoothConvexNMF(V, k, batch_size=5, epochs=1000, beta=0.001, tol=1e
         H = init['H']
         L = init['L']
 
-    for epoch in tqdm.tqdm(range(epochs)):
+    for epoch in tqdm(range(epochs)):
         W = np.matmul(V, L)
-        lamda = np.linalg.norm(W, 1, axis=0)
+        lamda = np.sum(np.abs(W), axis=0)
+
 
         for n, batchidx in enumerate(batchindices):
             # Update the activations for each batch
@@ -221,7 +227,7 @@ def smoothNMF(V, k, beta=0.0, tol=1e-8, max_iter=100, n_trials_init=10):
 
     costs = np.zeros((max_iter,))
     last_cost = np.inf
-    for I in tqdm.tqdm(range(max_iter)):
+    for I in tqdm(range(max_iter)):
         cur_cost = objfunc(V, Wh, Hh, beta)
 
         cost_diff = np.abs(cur_cost - last_cost)
