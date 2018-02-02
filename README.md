@@ -37,6 +37,8 @@ $ python setup.py install --user
 Then you can create a new file ```runnmf.py``` at the same directory as ```scnmf.py``` and add the following:
 
 ```python
+%matplotlib inline
+
 from scnmf import *
 X = np.abs(np.random.randn(10, 3))
 Y = np.array([
@@ -47,11 +49,11 @@ Y = np.array([
 Y += np.abs(np.random.randn(Y.shape[0], Y.shape[1]) * 0.00001)
 V = np.matmul(X, Y)
 
-L, H, cost = SmoothConvexNMF(V, 3, beta=0.01, max_iter=1000)
+L, H, cost = smoothConvexNMF(V, 3, beta=0.01, max_iter=1000)
 
 # or
 
-L, H, cost = minibatchSmoothConvexNMF(V, 3, beta=0.01, batch_size=2, epochs=1000)
+L, H, cost = miniBatchSmoothConvexNMF(V, 3, beta=0.01, batch_size=2, epochs=1000)
 
 # Originally V = WH, but here we constrained W to be a linear combination of the rows of V.
 
@@ -61,11 +63,13 @@ print(cost[-1])
 
 # Plot the cost (requires matplotlib)
 import matplotlib.pyplot as plt
-plt.plt(cost)
+plt.figure()
+plt.plot(cost)
 plt.title('cost')
 plt.xlabel('iteration #')
 
 # Plot dictionary matrix W
+plt.figure()
 plt.imshow(W, aspect='auto')
 plt.title('W')
 
